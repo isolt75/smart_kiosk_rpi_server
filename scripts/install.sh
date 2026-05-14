@@ -19,6 +19,7 @@ apt-get install -y \
   python3 python3-venv python3-pip \
   libatlas-base-dev libportaudio2 portaudio19-dev \
   libcamera-apps python3-libcamera python3-picamera2 \
+  libgl1 libglib2.0-0 \
   ffmpeg
 
 echo "[2/6] 앱 디렉터리 준비: ${APP_DIR}"
@@ -34,9 +35,9 @@ sudo -u "${SERVICE_USER}" "${APP_DIR}/venv/bin/pip" install --upgrade pip
 # picamera2/RPi.GPIO 등은 시스템 site-packages를 같이 보게 함
 sudo -u "${SERVICE_USER}" "${APP_DIR}/venv/bin/pip" install -r "${APP_DIR}/requirements.txt"
 
-echo "[4/6] 캐시/로그 디렉터리 권한 설정"
-mkdir -p "${CACHE_DIR}/images" "${CACHE_DIR}/audio" "${LOG_DIR}"
-chown -R "${SERVICE_USER}:${SERVICE_USER}" "${CACHE_DIR}" "${LOG_DIR}"
+echo "[4/6] 캐시/로그/모델 디렉터리 권한 설정"
+mkdir -p "${CACHE_DIR}/images" "${CACHE_DIR}/audio" "${LOG_DIR}" "${APP_DIR}/models"
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "${CACHE_DIR}" "${LOG_DIR}" "${APP_DIR}/models"
 chmod 700 "${CACHE_DIR}"
 
 echo "[5/6] .env 템플릿 복사"
@@ -54,12 +55,20 @@ systemctl enable edge-server.service
 
 cat <<EOF
 
-설치 완료. 다음 명령으로 시작하세요:
+설치 완료. 다음 단계:
 
-  sudo systemctl start edge-server
-  sudo systemctl status edge-server
-  sudo journalctl -u edge-server -f
+1) (선택) 번호판 검출용 YOLOv8 모델을 배치하세요:
+     ${APP_DIR}/models/license_plate.pt   (또는 .onnx)
+   모델이 없으면 검출 단계를 건너뛰고 원본 이미지만 메인 서버로 전송합니다.
+
+2) ${APP_DIR}/.env 를 편집해 API_KEY / API_BASE_URL 을 설정합니다.
+
+3) 서비스 시작:
+     sudo systemctl start edge-server
+     sudo systemctl status edge-server
+     sudo journalctl -u edge-server -f
 
 로그: ${LOG_DIR}/edge-server.log
 캐시: ${CACHE_DIR}
+모델 디렉터리: ${APP_DIR}/models
 EOF

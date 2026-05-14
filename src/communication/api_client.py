@@ -8,13 +8,15 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Sequence
 
 import requests
 
 from src.communication.retry import RetriableError, run_with_retry
 from src.config import settings
+from src.core.queue_manager import PlatePayload
 from src.utils.logger import logger
 
 
@@ -67,20 +69,55 @@ class APIClient:
         distance_cm: float,
         image_bytes: bytes,
         image_name: str,
+        plates: Sequence[PlatePayload] = (),
     ) -> dict[str, Any]:
+        """차량 진입 이미지 업로드.
+
+        ``plates``가 비어있지 않으면 엣지에서 YOLO로 검출된 번호판 정보가
+        함께 전송된다 (API v1.1 확장):
+          - 추가 form 필드 ``plates_meta``: JSON 배열 (bbox/conf/class)
+          - 추가 파일 ``plate_image_{i}``: 각 번호판의 crop JPEG
+        메인 서버는 이 crop들에 OCR을 수행해 텍스트를 추출한다.
+        """
+
         def _do() -> dict[str, Any]:
             self._session.headers["X-Timestamp"] = _iso_now()
+            data = {
+                "event_id": event_id,
+                "device_id": settings.device_id,
+                "captured_at": captured_at.isoformat(timespec="milliseconds").replace(
+                    "+00:00", "Z"
+                ),
+                "distance_cm": f"{distance_cm:.2f}",
+            }
+            files: list[tuple[str, tuple[str, bytes, str]]] = [
+                ("image", (image_name, image_bytes, "image/jpeg"))
+            ]
+            if plates:
+                data["plates_meta"] = json.dumps(
+                    [
+                        {
+                            "index": i,
+                            "bbox_xyxy": list(p.bbox_xyxy),
+                            "confidence": round(p.confidence, 4),
+                            "class": p.class_name,
+                            "crop_filename": p.crop_filename,
+                        }
+                        for i, p in enumerate(plates)
+                    ],
+                    ensure_ascii=False,
+                )
+                for i, plate in enumerate(plates):
+                    files.append(
+                        (
+                            f"plate_image_{i}",
+                            (plate.crop_filename, plate.crop_jpeg, "image/jpeg"),
+                        )
+                    )
             response = self._session.post(
                 self._url("/drivethrough/vehicle-entry"),
-                data={
-                    "event_id": event_id,
-                    "device_id": settings.device_id,
-                    "captured_at": captured_at.isoformat(timespec="milliseconds").replace(
-                        "+00:00", "Z"
-                    ),
-                    "distance_cm": f"{distance_cm:.2f}",
-                },
-                files={"image": (image_name, image_bytes, "image/jpeg")},
+                data=data,
+                files=files,
                 timeout=self._timeout,
                 verify=self._verify,
             )

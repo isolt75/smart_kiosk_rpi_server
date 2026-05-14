@@ -480,6 +480,47 @@ WantedBy=multi-user.target
 | 버전 | 일자 | 작성자 | 변경 내용 |
 |---|---|---|---|
 | 1.0 | 2026-05-14 | IoT Architecture Team | 최초 작성 |
+| 1.1 | 2026-05-15 | IoT Architecture Team | 하이브리드 추론 도입 — 엣지에서 YOLOv8 번호판 영역 검출, 메인 서버는 crop된 번호판 이미지에 OCR을 적용. API-1 multipart에 `plates_meta`(JSON), `plate_image_{i}`(파일) 추가 필드. 모델 미배치 시 1.0과 동일하게 원본만 전송하는 폴백 유지. |
+
+---
+
+## 부록 C. API-1 v1.1 확장 필드 (번호판 사전 검출)
+
+엣지에서 YOLO로 번호판을 미리 검출한 경우, API-1 요청에 다음 필드가
+추가된다 (모두 선택). 메인 서버는 이 crop들에 OCR을 수행하여 번호판
+텍스트를 추출한다.
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `plates_meta` | string (JSON form) | 검출된 번호판 메타데이터 배열 |
+| `plate_image_{i}` | file (binary) | 검출된 번호판 crop JPEG (i = 0..N-1) |
+
+`plates_meta` JSON 스키마:
+```json
+[
+  {
+    "index": 0,
+    "bbox_xyxy": [x1, y1, x2, y2],
+    "confidence": 0.87,
+    "class": "license_plate",
+    "crop_filename": "{event_id}_..._plate0.jpg"
+  }
+]
+```
+
+**처리 흐름:**
+```
+edge: VEHICLE_DETECTED → 카메라 캡처(원본 JPEG)
+                          ├─ YOLO 추론 → bbox 좌표
+                          └─ crop → 번호판 이미지(JPEG)
+                          ↓
+edge → main: POST /vehicle-entry (원본 + crop들 + plates_meta)
+main:  OCR(plate_image_*) → 번호판 텍스트 → DB 저장 / WebSocket Push
+```
+
+**폴백 규약:** `plates_meta` 가 비어 있거나 누락이면 메인 서버는 기존 v1.0
+방식대로 원본 이미지 전체에 YOLO+OCR을 수행한다. 엣지의 검출 결과가
+부정확한 경우(낮은 confidence 등)에도 메인 서버가 재검출하는 것을 권장.
 
 ---
 

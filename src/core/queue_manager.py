@@ -19,10 +19,23 @@ AUDIO_JOB = "AUDIO"
 
 
 @dataclass
+class PlatePayload:
+    """검출된 번호판 1개의 전송용 데이터."""
+
+    bbox_xyxy: tuple[int, int, int, int]
+    confidence: float
+    class_name: str
+    crop_jpeg: bytes
+    crop_filename: str
+
+
+@dataclass
 class TransmitJob:
     """API 전송 작업 단위.
 
     ``payload``는 multipart로 직렬화될 form 필드 + 파일을 담는다.
+    ``plates``는 IMAGE_JOB에서만 사용되며, 엣지에서 검출된 번호판
+    crop들을 메인 서버에 함께 전달한다(하이브리드: 엣지 YOLO → 메인 OCR).
     """
 
     kind: str  # IMAGE_JOB / AUDIO_JOB
@@ -33,6 +46,7 @@ class TransmitJob:
     file_name: str
     file_bytes: bytes
     content_type: str
+    plates: list[PlatePayload] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     attempts: int = 0
 
@@ -71,4 +85,10 @@ class TransmitQueue:
         return self._q.qsize()
 
 
-__all__ = ["TransmitJob", "TransmitQueue", "IMAGE_JOB", "AUDIO_JOB"]
+__all__ = [
+    "TransmitJob",
+    "TransmitQueue",
+    "PlatePayload",
+    "IMAGE_JOB",
+    "AUDIO_JOB",
+]

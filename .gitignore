@@ -49,3 +49,8 @@ Thumbs.db
 
 # Raspberry Pi specific
 *.pid
+
+# YOLO 모델 파일 (대용량, 별도 배포)
+models/
+*.pt
+*.onnx

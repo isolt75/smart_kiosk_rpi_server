@@ -30,7 +30,14 @@ from src.core.event_bus import (
     VEHICLE_DEPARTED,
     VEHICLE_DETECTED,
 )
-from src.core.queue_manager import AUDIO_JOB, IMAGE_JOB, TransmitJob, TransmitQueue
+from src.core.queue_manager import (
+    AUDIO_JOB,
+    IMAGE_JOB,
+    PlatePayload,
+    TransmitJob,
+    TransmitQueue,
+)
+from src.inference.plate_detector import make_plate_detector
 from src.sensors.ultrasonic import UltrasonicMonitor
 from src.utils.cache import cleanup_all_caches
 from src.utils.leds import StatusLeds
@@ -59,6 +66,7 @@ class EdgeServer:
         self._queue = TransmitQueue(maxsize=settings.queue_max_size)
         self._camera = CameraCapturer()
         self._mic = MicRecorder()
+        self._plate_detector = make_plate_detector()
         self._api = APIClient()
         self._leds = StatusLeds()
         self._sensor = UltrasonicMonitor(self._bus)
@@ -141,6 +149,10 @@ class EdgeServer:
         except Exception:
             pass
         try:
+            self._plate_detector.close()
+        except Exception:
+            pass
+        try:
             self._leds.close()
         except Exception:
             pass
@@ -167,6 +179,9 @@ class EdgeServer:
             captured_at = event.timestamp
             jpeg, filename, _cache_path = self._camera.capture(event.event_id, captured_at)
             distance_cm = float(event.payload.get("distance_cm", 0.0))
+
+            plates = self._run_plate_detection(jpeg, filename)
+
             job = TransmitJob(
                 kind=IMAGE_JOB,
                 event_id=event.event_id,
@@ -181,6 +196,7 @@ class EdgeServer:
                 file_name=filename,
                 file_bytes=jpeg,
                 content_type="image/jpeg",
+                plates=plates,
             )
             self._queue.put(job)
             self._set_device_status("camera", "OK")
@@ -188,6 +204,36 @@ class EdgeServer:
             logger.exception(f"이미지 캡처 실패: {exc}")
             self._set_device_status("camera", "ERROR")
             self._leds.mark_error()
+
+    def _run_plate_detection(self, jpeg: bytes, image_filename: str) -> list[PlatePayload]:
+        if not getattr(self._plate_detector, "available", False):
+            return []
+        t0 = time.monotonic()
+        try:
+            detections = self._plate_detector.detect(jpeg)
+        except Exception as exc:
+            logger.warning(f"번호판 검출 실패 — 원본만 전송: {exc}")
+            return []
+        elapsed_ms = (time.monotonic() - t0) * 1000
+        if not detections:
+            logger.info(f"번호판 미검출 ({elapsed_ms:.0f}ms)")
+            return []
+        base = image_filename.rsplit(".", 1)[0]
+        payloads = [
+            PlatePayload(
+                bbox_xyxy=det.bbox_xyxy,
+                confidence=det.confidence,
+                class_name=det.class_name,
+                crop_jpeg=det.crop_jpeg,
+                crop_filename=f"{base}_plate{idx}.jpg",
+            )
+            for idx, det in enumerate(detections)
+        ]
+        logger.info(
+            f"번호판 {len(payloads)}건 검출 ({elapsed_ms:.0f}ms, "
+            f"top_conf={max(p.confidence for p in payloads):.2f})"
+        )
+        return payloads
 
     def _capture_audio_job(self, event: Event) -> None:
         try:
@@ -242,6 +288,7 @@ class EdgeServer:
                     distance_cm=float(job.form_fields["distance_cm"]),
                     image_bytes=job.file_bytes,
                     image_name=job.file_name,
+                    plates=job.plates,
                 )
             elif job.kind == AUDIO_JOB:
                 self._api.upload_voice_order(

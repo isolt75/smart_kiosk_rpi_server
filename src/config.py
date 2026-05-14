@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     audio_vad_silence_sec: float = 2.0
     audio_vad_aggressiveness: int = 2  # 0~3
 
+    # --- Plate Detection (YOLOv8, 옵션) ---
+    plate_model_path: str = "/opt/edge-server/models/license_plate.pt"
+    plate_conf_threshold: float = 0.5
+    plate_iou_threshold: float = 0.5
+    plate_img_size: int = 640
+    plate_max_detections: int = 5
+    plate_crop_jpeg_quality: int = 92
+
     # --- Cache ---
     cache_base_dir: Path = Path("/var/lib/edge/cache")
     cache_max_bytes: int = 1024 * 1024 * 1024  # 1GB

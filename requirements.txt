@@ -28,6 +28,13 @@ psutil==5.9.8
 # === Imaging (picamera2 출력 → JPEG 인코딩) ===
 Pillow==10.4.0
 
+# === Plate Detection (YOLOv8) ===
+# Pi 4에서 PyTorch 2.x 휠 설치는 무겁다. ONNX 변환 모델 사용 시 ultralytics는
+# onnxruntime 백엔드로 동작한다. 모델 파일은 별도 배치(.env로 경로 지정).
+ultralytics==8.2.50
+opencv-python-headless==4.10.0.84
+onnxruntime==1.18.1
+
 # === Development ===
 pytest==8.2.2
 pytest-mock==3.14.0
