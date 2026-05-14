@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Edge Server (mock / .env)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.main",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Edge Server (no envFile)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.main",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "EDGE_CACHE_BASE_DIR": "${workspaceFolder}/_dev_cache",
+        "EDGE_LOG_DIR": "${workspaceFolder}/_dev_logs",
+        "EDGE_API_BASE_URL": "http://localhost:8000/api/v1",
+        "EDGE_API_KEY": "dummy",
+        "EDGE_LOG_LEVEL": "DEBUG"
+      }
+    },
+    {
+      "name": "Python: 현재 파일",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
