@@ -1,4 +1,4 @@
-# === Hardware Control ===
+# === Hardware Control (Raspberry Pi OS only) ===
 gpiozero==2.0.1
 RPi.GPIO==0.7.1
 picamera2==0.3.19
@@ -17,12 +17,16 @@ requests-toolbelt==1.0.0
 # === Concurrency & Utilities ===
 python-dotenv==1.0.1
 pydantic==2.7.4
+pydantic-settings==2.3.4
 APScheduler==3.10.4
 tenacity==8.4.2
 
 # === Logging & Monitoring ===
 loguru==0.7.2
 psutil==5.9.8
+
+# === Imaging (picamera2 출력 → JPEG 인코딩) ===
+Pillow==10.4.0
 
 # === Development ===
 pytest==8.2.2

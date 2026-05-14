@@ -1,0 +1,29 @@
+[Unit]
+Description=Smart Drive-through Edge Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/edge-server
+EnvironmentFile=-/opt/edge-server/.env
+ExecStart=/opt/edge-server/venv/bin/python -m src.main
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# 로그는 loguru가 파일에 기록하고, journal은 stdout/stderr만 캡처
+StandardOutput=append:/var/log/edge-server/stdout.log
+StandardError=append:/var/log/edge-server/stderr.log
+
+# 보안 강화 (선택)
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
