@@ -482,5 +482,3 @@ WantedBy=multi-user.target
 | 1.0 | 2026-05-14 | IoT Architecture Team | 최초 작성 |
 
 ---
-
-**문서 끝.**
