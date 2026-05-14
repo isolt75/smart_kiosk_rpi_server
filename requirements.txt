@@ -1,0 +1,30 @@
+# === Hardware Control ===
+gpiozero==2.0.1
+RPi.GPIO==0.7.1
+picamera2==0.3.19
+
+# === Audio Processing ===
+sounddevice==0.4.7
+pyaudio==0.2.14
+webrtcvad==2.0.10
+numpy==1.26.4
+
+# === Network Communication ===
+requests==2.32.3
+urllib3==2.2.2
+requests-toolbelt==1.0.0
+
+# === Concurrency & Utilities ===
+python-dotenv==1.0.1
+pydantic==2.7.4
+APScheduler==3.10.4
+tenacity==8.4.2
+
+# === Logging & Monitoring ===
+loguru==0.7.2
+psutil==5.9.8
+
+# === Development ===
+pytest==8.2.2
+pytest-mock==3.14.0
+black==24.4.2
