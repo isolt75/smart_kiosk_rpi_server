@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     plate_img_size: int = 640
     plate_max_detections: int = 5
     plate_crop_jpeg_quality: int = 92
+    # True: 번호판 crop만 전송, 미검출 시 업로드 스킵
+    # False: 원본 이미지 + crop 함께 전송 (SRS v1.0 legacy 동작)
+    plate_only_upload: bool = True
 
     # --- Cache ---
     cache_base_dir: Path = Path("/var/lib/edge/cache")

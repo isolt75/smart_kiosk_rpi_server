@@ -182,6 +182,13 @@ class EdgeServer:
 
             plates = self._run_plate_detection(jpeg, filename)
 
+            if settings.plate_only_upload and not plates:
+                logger.info(
+                    f"번호판 미검출 → 전송 스킵 (event={event.event_id})"
+                )
+                self._set_device_status("camera", "OK")
+                return
+
             job = TransmitJob(
                 kind=IMAGE_JOB,
                 event_id=event.event_id,

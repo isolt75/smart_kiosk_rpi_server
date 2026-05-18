@@ -74,10 +74,15 @@ class APIClient:
         """차량 진입 이미지 업로드.
 
         ``plates``가 비어있지 않으면 엣지에서 YOLO로 검출된 번호판 정보가
-        함께 전송된다 (API v1.1 확장):
-          - 추가 form 필드 ``plates_meta``: JSON 배열 (bbox/conf/class)
-          - 추가 파일 ``plate_image_{i}``: 각 번호판의 crop JPEG
+        함께 전송된다:
+          - form 필드 ``plates_meta``: JSON 배열 (bbox/conf/class)
+          - 파일 ``plate_image_{i}``: 각 번호판의 crop JPEG
         메인 서버는 이 crop들에 OCR을 수행해 텍스트를 추출한다.
+
+        ``settings.plate_only_upload``:
+          - True (기본): 원본 ``image`` 필드는 전송하지 않고 crop만 보낸다.
+            호출 측에서 ``plates``가 비지 않음을 보장해야 한다.
+          - False: 원본 ``image`` + crop을 함께 전송 (SRS v1.0 legacy).
         """
 
         def _do() -> dict[str, Any]:
@@ -90,9 +95,15 @@ class APIClient:
                 ),
                 "distance_cm": f"{distance_cm:.2f}",
             }
-            files: list[tuple[str, tuple[str, bytes, str]]] = [
-                ("image", (image_name, image_bytes, "image/jpeg"))
-            ]
+            files: list[tuple[str, tuple[str, bytes, str]]] = []
+            if not settings.plate_only_upload:
+                files.append(("image", (image_name, image_bytes, "image/jpeg")))
+            elif not plates:
+                logger.warning(
+                    f"plate_only_upload=True 인데 plates=[] — 업로드 스킵 "
+                    f"(event={event_id})"
+                )
+                return {}
             if plates:
                 data["plates_meta"] = json.dumps(
                     [
